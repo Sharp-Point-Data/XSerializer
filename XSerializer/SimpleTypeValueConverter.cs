@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Linq;
+using System.Xml.Serialization;
 
 namespace XSerializer
 {
@@ -165,7 +167,37 @@ namespace XSerializer
             if (type.IsEnum)
             {
                 var defaultValue = Activator.CreateInstance(type);
-                return (value, options) => string.IsNullOrEmpty(value) ? defaultValue : Enum.Parse(type, value, options.ShouldIgnoreCaseForEnum);
+
+                return (value, options) => {
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        return defaultValue;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            return Enum.Parse(type, value, options.ShouldIgnoreCaseForEnum);
+                        }
+                        catch (Exception)
+                        {
+                            var fields = type.GetFields()
+                                .Select(x => new
+                                {
+                                    attribute = x
+                                    .GetCustomAttributes(false)
+                                    .OfType<XmlEnumAttribute>()
+                                    .FirstOrDefault(),
+
+                                    member = x
+
+                                })
+                                .Where(x => x.attribute != null);
+
+                            return fields.FirstOrDefault(x => x.attribute.Name == value).member.GetValue(null);
+                        }
+                    }
+                };
             }
 
             if (type.IsGenericType
