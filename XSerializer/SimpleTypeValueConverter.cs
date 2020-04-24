@@ -177,7 +177,10 @@ namespace XSerializer
                     {
                         try
                         {
-                            return Enum.Parse(type, value, options.ShouldIgnoreCaseForEnum);
+                            var result =  Enum.Parse(type, value, options.ShouldIgnoreCaseForEnum);
+                            if (Enum.IsDefined(type, result))
+                                return result;
+                            throw new ArgumentException();
                         }
                         catch (Exception)
                         {
